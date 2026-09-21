@@ -1,0 +1,77 @@
+#pragma once
+#include "account/AccountManagerFanLX.h"
+#include <algorithm>
+#include <cstddef>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+// AccountSessionFanLX：从原领域聚合头文件拆出，保留已验证的业务接口。
+class AccountSessionFanLX {
+    AccountManagerFanLX *managerFanLX; // 关联的账户管理器（不拥有；生命周期由调用方保证）
+    ServiceTypeFanLX serviceFanLX;     // 本会话所在平台
+    std::string accountIdFanLX;        // 本会话的平台账号 ID（前端可见身份）
+    std::string userIdFanLX;           // 归属用户 ID（后端内部维度；私有，无访问器）
+
+  public:
+    // 构造：仅供 AccountManagerFanLX::login 签发。
+    AccountSessionFanLX(AccountManagerFanLX &manager, ServiceTypeFanLX service, std::string accountId,
+                        std::string user)
+        : managerFanLX(&manager), serviceFanLX(service), accountIdFanLX(std::move(accountId)),
+          userIdFanLX(std::move(user)) {}
+
+    // 查询：本会话所在平台。
+    ServiceTypeFanLX service() const {
+        return serviceFanLX;
+    }
+    // 查询：本会话的平台账号 ID —— 这就是前端所持有的全部身份信息。
+    const std::string &accountId() const {
+        return accountIdFanLX;
+    }
+    // 查询：本会话是否仍有效（未被注销）；被注销后使用方应以"会话已过期"处理。
+    bool isLoggedIn() const {
+        return managerFanLX->isAccountLoggedIn(serviceFanLX, accountIdFanLX);
+    }
+
+    // 自主开通：为本人开通某平台服务（该平台须已有本人的服务账号）。
+    // 对应工程计划 S02 的"自主开通"；登录本身不会替用户开通未开通的服务。
+    void subscribeTo(ServiceTypeFanLX service) {
+        managerFanLX->subscribe(userIdFanLX, service);
+    }
+
+    // 建立绑定：把"当前登录的这个账号"绑定到另一个平台账号
+    // （如"我在微信里绑定我的 QQ 号"），参数是对方平台账号，不涉及 userId。
+    void bindTo(ServiceTypeFanLX targetService, const std::string &targetAccountId) {
+        managerFanLX->bindAccounts(serviceFanLX, accountIdFanLX, targetService, targetAccountId);
+    }
+    // 解除绑定：解除当前账号与另一个平台账号之间的绑定关系。
+    bool unbindFrom(ServiceTypeFanLX targetService, const std::string &targetAccountId) {
+        return managerFanLX->unbindAccounts(serviceFanLX, accountIdFanLX, targetService, targetAccountId);
+    }
+    // 查询：当前账号的全部绑定对端账号。
+    std::vector<ServiceAccountFanLX> boundAccounts() const {
+        return managerFanLX->bindingsOf(serviceFanLX, accountIdFanLX);
+    }
+
+    // 注销当前平台服务（只退本平台，其它平台不受影响）。
+    void logout() {
+        managerFanLX->logout(serviceFanLX, accountIdFanLX);
+    }
+    // 平台注销：退出本人的全部已登录平台（内部按 userId 清理，不暴露 userId）。
+    void logoutAll() {
+        managerFanLX->logoutAll(serviceFanLX, accountIdFanLX);
+    }
+};
+inline AccountSessionFanLX AccountManagerFanLX::login(ServiceTypeFanLX service, const std::string &accountId,
+                                                      bool confirmOthers) {
+    const auto key = keyOfAccountIdFanLX(service, accountId); // 账号不存在时抛"平台账号不存在"
+    const std::string &user = accountsFanLX.at(key).userId;
+    loginCoreFanLX(user, key, confirmOthers);
+    return AccountSessionFanLX(*this, service, accountId, user);
+}

@@ -1,0 +1,20 @@
+#pragma once
+// 兼容原 include 路径；自编类型现在各自独立成文件。
+// 兼容入口：群域的全部类型。按课程要求，每个类各自独立存放于 include/group/ 下。
+#include "group/GroupModeFanLX.h"
+#include "group/GroupRoleFanLX.h"
+#include "group/GroupKeyFanLX.h"
+#include "group/GroupKeyHashFanLX.h"
+#include "group/GroupMembershipFanLX.h"
+#include "group/GroupMemberSnapshotFanLX.h"
+#include "group/GroupStateFanLX.h"
+#include "group/GroupPolicyFanLX.h"
+#include "group/QQGroupPolicyFanLX.h"
+#include "group/WechatGroupPolicyFanLX.h"
+#include "group/GroupFanLX.h"
+#include "group/GroupApplicationFanLX.h"
+#include "group/GroupInvitationFanLX.h"
+#include "group/DiscussionGroupFanLX.h"
+#include "group/DiscussionSnapshotFanLX.h"
+#include "group/GroupRecordFanLX.h"
+#include "group/GroupServiceFanLX.h"
